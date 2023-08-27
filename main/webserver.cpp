@@ -12,7 +12,6 @@
 #define PART_BOUNDARY "123456789000000000000987654321"
 #define MAX_SESSIONS 5
 
-static const char* LOG_INFO = "INFO: ";
 SemaphoreHandle_t WebServer::sessionTasksMutex = xSemaphoreCreateMutex();
 TaskHandle_t WebServer::cameraCaptureTaskHandle = nullptr;
 std::shared_ptr<WebServer> WebServer::self = nullptr;

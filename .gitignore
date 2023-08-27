@@ -1,4 +1,5 @@
 build/*
 *.old
 *.lock
+.DS_store
 
