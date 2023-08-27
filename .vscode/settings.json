@@ -1,0 +1,20 @@
+{
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    "idf.adapterTargetName": "esp32",
+    "idf.customExtraPaths": "/Users/kova/.espressif/tools/xtensa-esp-elf-gdb/11.2_20220823/xtensa-esp-elf-gdb/bin:/Users/kova/.espressif/tools/riscv32-esp-elf-gdb/11.2_20220823/riscv32-esp-elf-gdb/bin:/Users/kova/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin:/Users/kova/.espressif/tools/xtensa-esp32s2-elf/esp-2022r1-11.2.0/xtensa-esp32s2-elf/bin:/Users/kova/.espressif/tools/xtensa-esp32s3-elf/esp-2022r1-11.2.0/xtensa-esp32s3-elf/bin:/Users/kova/.espressif/tools/riscv32-esp-elf/esp-2022r1-11.2.0/riscv32-esp-elf/bin:/Users/kova/.espressif/tools/esp32ulp-elf/2.35_20220830/esp32ulp-elf/bin:/Users/kova/.espressif/tools/cmake/3.24.0/CMake.app/Contents/bin:/Users/kova/.espressif/tools/openocd-esp32/v0.11.0-esp32-20221026/openocd-esp32/bin:/Users/kova/.espressif/tools/ninja/1.10.2",
+    "idf.customExtraVars": "{\"OPENOCD_SCRIPTS\":\"/Users/kova/.espressif/tools/openocd-esp32/v0.11.0-esp32-20221026/openocd-esp32/share/openocd/scripts\"}",
+    "idf.espIdfPath": "/Users/kova/esp/esp-idf",
+    "idf.openOcdConfigs": [
+        "interface/ftdi/esp32_devkitj_v1.cfg",
+        "target/esp32.cfg"
+    ],
+    "idf.port": "/dev/cu.usbserial-1130",
+    "idf.pythonBinPath": "/Users/kova/.espressif/python_env/idf5.0_py3.10_env/bin/python",
+    "idf.toolsPath": "/Users/kova/.espressif",
+    "files.associations": {
+        "iostream": "cpp",
+        "complex": "cpp",
+        "*.tcc": "cpp"
+    },
+    "idf.flashType": "UART"
+}
