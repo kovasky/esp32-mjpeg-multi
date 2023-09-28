@@ -4,16 +4,19 @@
 #include <esp_log.h>
 #include <esp_netif.h>
 #include <esp_wifi.h>
+#include <nvs_flash.h>
 
 // Custom Headers
 #include "helpers.hpp"
 #include "webserver.hpp"
 
+#define FACTORY_INDEX (-1)
 #define PART_BOUNDARY "123456789000000000000987654321"
 #define MAX_SESSIONS 5
 
 SemaphoreHandle_t WebServer::sessionTasksMutex = xSemaphoreCreateMutex();
 TaskHandle_t WebServer::cameraCaptureTaskHandle = nullptr;
+TaskHandle_t WebServer::wifiReconnectTaskHandle = nullptr;
 std::shared_ptr<WebServer> WebServer::self = nullptr;
 
 WebServer::WebServer() : camera(std::make_unique<Camera>()),
@@ -44,6 +47,8 @@ WebServer::WebServer(const WebServer &other)
 
 void WebServer::init()
 {
+    ESP_ERROR_CHECK(nvs_flash_init());
+
     *this->serverConfig = HTTPD_DEFAULT_CONFIG();
     *this->wifiInitConfig = WIFI_INIT_CONFIG_DEFAULT();
     this->wifiConfig->sta = {
@@ -84,7 +89,6 @@ void WebServer::startHttpServer()
     if (httpd_start(this->serverHandle.get(), this->serverConfig.get()) != ESP_OK)
         return;
 
-    // Register WebSocket URI handler
     httpd_uri_t urimJPEG = {
         .uri = "/stream", 
         .method = HTTP_GET,
@@ -93,6 +97,7 @@ void WebServer::startHttpServer()
     };
 
     httpd_register_uri_handler(*(this->serverHandle), &urimJPEG );
+
     xTaskCreatePinnedToCore(WebServer::cameraCaptureTask,"Capture Frame Task",4096,nullptr,2,&this->cameraCaptureTaskHandle,1);
 }
 
@@ -104,9 +109,17 @@ void WebServer::eventHandler(void *arg, esp_event_base_t event_base, int32_t eve
             return;
         
     }
-    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
+        xTaskCreatePinnedToCore(WebServer::wifiReconnectTask,"Wifi Reconnect Task", 4096, nullptr, 1, &wifiReconnectTaskHandle,1);
+    }
+    else if(event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
+    {
+        if(wifiReconnectTaskHandle != nullptr)
+        {
+            vTaskDelete(wifiReconnectTaskHandle);
+            wifiReconnectTaskHandle = nullptr;
+        }
     }
 }
 
@@ -125,6 +138,9 @@ esp_err_t WebServer::mJPEGHandler(httpd_req_t *req)
         xSemaphoreTake(self->sessionTasksMutex,portMAX_DELAY);
         self->sessionTasks->push_back(taskHandle);
         xSemaphoreGive(self->sessionTasksMutex);
+
+        if(eTaskGetState(cameraCaptureTaskHandle) == eSuspended)
+            vTaskResume(cameraCaptureTaskHandle);
     }
     else{
         static const char *response = "Can't take more clients, try again later.";
@@ -139,7 +155,7 @@ void WebServer::mJPEGStreamTask(void* pvParameters)
 {
     static const char *frame_boundary = "--" PART_BOUNDARY "\r\nContent-Type: image/jpeg\r\n\r\n";
     static camera_fb_t* fb = nullptr;
-    static BaseType_t higherPriorityTaskWoken = pdTRUE; // Initialize the flag
+    static BaseType_t higherPriorityTaskWoken = pdTRUE;
     httpd_req_t *req = (httpd_req_t *)pvParameters;
     esp_err_t res = ESP_OK;
 
@@ -172,11 +188,19 @@ void WebServer::mJPEGStreamTask(void* pvParameters)
 void WebServer::cameraCaptureTask(void* pvParameters)
 {
     static camera_fb_t* fb = nullptr;
+    static size_t size = 0;
     static BaseType_t higherPriorityTaskWoken = pdTRUE; // Initialize the flag
     static uint32_t taskStatus;
 
     while(true)
     {
+        xSemaphoreTake(self->sessionTasksMutex,portMAX_DELAY);
+        size = self->sessionTasks->size();
+        xSemaphoreGive(self->sessionTasksMutex);
+
+        if(size == 0)
+            vTaskSuspend(nullptr);
+
         fb = self->camera->takePicture();
 
         if (fb == nullptr)
@@ -209,4 +233,14 @@ void WebServer::cameraCaptureTask(void* pvParameters)
         fb = nullptr;
         vTaskDelay(15 / portTICK_PERIOD_MS);
     }
+}
+
+void WebServer::wifiReconnectTask(void* pvParameters)
+{
+    while(esp_wifi_connect() != ESP_OK)
+    {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
+    vTaskSuspend(nullptr);
 }

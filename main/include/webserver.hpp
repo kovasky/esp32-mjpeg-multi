@@ -23,11 +23,13 @@ public:
 private:
     static SemaphoreHandle_t sessionTasksMutex;
     static TaskHandle_t cameraCaptureTaskHandle;
+    static TaskHandle_t wifiReconnectTaskHandle;
     static std::shared_ptr<WebServer> self;
     static void eventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
     static esp_err_t mJPEGHandler(httpd_req_t *req);
     static void mJPEGStreamTask(void* pvParameters);
     static void cameraCaptureTask(void* pvParameters);
+    static void wifiReconnectTask(void* pvParameters);
     std::shared_ptr<Camera> camera;
     std::shared_ptr<httpd_handle_t> serverHandle;
     std::shared_ptr<httpd_config_t> serverConfig;
